@@ -1,9 +1,9 @@
 export default function createEmployeesObject(departmentName, employees) {
   const output = {
-    departmentName: [],
+    [departmentName]: [],
   };
   for (const employee of employees) {
-    output.departmentName.push(employee);
+    output[departmentName].push(employee);
   }
 
   return output;
