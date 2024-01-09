@@ -1,3 +1,3 @@
 export default function hasValuesFromArray(set, value) {
-  return value.map((el) => set.has(el)).length > 0;
+  return value.every((el) => set.has(el));
 }
