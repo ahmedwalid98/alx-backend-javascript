@@ -1,56 +1,60 @@
 const http = require('http');
 const fs = require('fs');
 
-const app = http.createServer();
-const DB_FILE = process.argv.length > 2 ? process.argv[2] : '';
+function countStudents(path) {
+  return new Promise((resolve, reject) => {
+    // eslint-disable-next-line consistent-return
+    fs.readFile(path, (error, dataBuffer) => {
+      if (error) {
+        return reject();
+      }
+      const data = dataBuffer.toString().split('\n');
+      let count = 0;
+      const fields = {};
 
-const countStudents = (dataPath) => new Promise((resolve, reject) => {
-  fs.readFile(dataPath, 'utf-8', (err, data) => {
-    if (err) {
-      reject(new Error('Cannot load the database'));
-    }
-    if (data) {
-      const fileLines = data
-        .toString('utf-8')
-        .trim()
-        .split('\n');
-      const studentGroups = {};
-      const dbFieldNames = fileLines[0].split(',');
-      const studentPropNames = dbFieldNames
-        .slice(0, dbFieldNames.length - 1);
-
-      for (const line of fileLines.slice(1)) {
-        const studentRecord = line.split(',');
-        const studentPropValues = studentRecord
-          .slice(0, studentRecord.length - 1);
-        const field = studentRecord[studentRecord.length - 1];
-        if (!Object.keys(studentGroups).includes(field)) {
-          studentGroups[field] = [];
+      const firstnameIndex = data[0].split(',').indexOf('firstname');
+      const fieldIndex = data[0].split(',').indexOf('field');
+      // eslint-disable-next-line no-plusplus
+      for (let i = 1; i < data.length; i++) {
+        // eslint-disable-next-line no-continue
+        if (data[i] === '') continue;
+        // eslint-disable-next-line no-plusplus
+        count++;
+        const row = data[i].split(',');
+        if (fields[row[fieldIndex]]) {
+          fields[row[fieldIndex]].push(row[firstnameIndex]);
+        } else {
+          fields[row[fieldIndex]] = [row[firstnameIndex]];
         }
-        const studentEntries = studentPropNames
-          .map((propName, idx) => [propName, studentPropValues[idx]]);
-        studentGroups[field].push(Object.fromEntries(studentEntries));
       }
+      let studentsData = 'This is the list of our students\n';
+      studentsData += `Number of students: ${count}\n`;
 
-      const totalStudents = Object
-        .values(studentGroups)
-        .reduce((pre, cur) => (pre || []).length + cur.length);
-      console.log(`Number of students: ${totalStudents}`);
-      for (const [field, group] of Object.entries(studentGroups)) {
-        const studentNames = group.map((student) => student.firstname).join(', ');
-        console.log(`Number of students in ${field}: ${group.length}. List: ${studentNames}`);
+      // eslint-disable-next-line guard-for-in
+      for (const field in fields) {
+        studentsData += `Number of students in ${field}: ${
+          fields[field].length
+        }. List: ${fields[
+          field
+          // eslint-disable-next-line comma-dangle
+        ].join(', ')}\n`;
       }
-      resolve(true);
-    }
+      resolve(studentsData.slice(0, -1));
+    });
+  }).catch(() => {
+    throw new Error('Cannot load the database');
   });
-});
-
-app.on('request', (req, res) => {
-  if (req.url = '/') {
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Hello Holberton School!');
-  } else if (req.url = '/students') {
-    countStudents(DB_FILE)
+}
+const app = http
+  // eslint-disable-next-line consistent-return
+  .createServer((req, res) => {
+    if (req.url === '/') {
+      res.setHeader('Content-Type', 'text/plain');
+      return res.end('Hello Holberton School!');
+    }
+    if (req.url === '/students') {
+      const path = process.argv[2];
+      countStudents(path)
         .then((data) => {
           res.setHeader('Content-Type', 'text/plain');
           res.end(data);
@@ -59,9 +63,7 @@ app.on('request', (req, res) => {
           res.setHeader('Content-Type', 'text/plain');
           res.end(`This is the list of our students\n${error.message}`);
         });
-  }
-});
-
-app.listen(1245);
-
+    }
+  })
+  .listen(1245);
 module.exports = app;
